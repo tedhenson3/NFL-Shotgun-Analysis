@@ -1,0 +1,218 @@
+---
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, include = FALSE}
+library(xtable)
+library(readr)
+library(tidyverse)
+setwd('~/NFL Shotgun Analysis')
+data <- read_csv("NFL Shotgun Data.csv")
+data = data[which(!(data$Note %in% c('FG',
+                                   'holding',
+                                   'false start',
+                                   'offensive interference'))),]
+
+data = data %>% dplyr::select(-Note)
+
+nice.table = data
+
+colnames(data)[which(colnames(data) == 'Yards Gained')] = 'Yards.Gained'
+
+data$QB.Position = ifelse(data$`Shotgun` == 1, 'Shotgun',
+                      'Under Center')
+
+data$Play.Type = ifelse(data$Run == 1, 'Run',
+                  'Pass')
+
+
+summary.table = data %>% group_by(QB.Position,
+                                  Play.Type) %>% 
+  summarise(num.plays = n(),
+    avg.yards = mean(`Yards.Gained`),
+            min.yards = min(`Yards.Gained`),
+            max.yards = max(`Yards.Gained`),
+            sd.yards = sd(`Yards.Gained`)
+            )
+
+
+home.table = data %>% group_by(Home) %>% 
+  summarise(num.plays = n(),
+    avg.yards = mean(`Yards.Gained`),
+            min.yards = min(`Yards.Gained`),
+            max.yards = max(`Yards.Gained`),
+            sd.yards = sd(`Yards.Gained`)
+            ) %>% mutate(Prop.Plays = num.plays / sum(num.plays) * 100)
+
+
+
+colnames(home.table) = c('Home', 'Number of Plays',
+                            'Average',
+                            'Minimum', 'Maximum', 'SD', 'Pct of Plays')
+
+
+home.table = home.table %>% dplyr::select(Home,
+                                          `Number of Plays`,
+                                          
+                                          `Pct of Plays`, everything())
+
+
+
+team.table = data %>% group_by(Team) %>% 
+  summarise(num.plays = n(),
+    avg.yards = mean(`Yards.Gained`),
+            min.yards = min(`Yards.Gained`),
+            max.yards = max(`Yards.Gained`),
+            sd.yards = sd(`Yards.Gained`)
+            ) %>% mutate(Prop.Plays = num.plays / sum(num.plays) * 100)
+
+
+colnames(team.table) = c('Team',  'Number of Plays',
+                            'Average',
+                            'Minimum', 'Maximum', 'SD', 'Pct of Plays')
+
+
+team.table = team.table %>% dplyr::select(Team,
+                                          `Number of Plays`,
+                                          `Pct of Plays`,
+                                          everything())
+
+
+row.names(summary.table) = NULL
+
+
+library(pander)
+
+colnames(nice.table) = c('QB Position', 'Play Type',
+                         'Yards Gained', 'Offensive Team',
+                         'Home Team')
+setwd('~/NFL Shotgun Analysis')
+data <- read_csv("NFL Shotgun Data.csv")
+data = data[which(!(data$Note %in% c('FG',
+                                     'holding',
+                                     'false start',
+                                     'offensive interference'))),]
+```
+`r pander(head(nice.table))`
+`r pander(summary.table)`
+`r pander(home.table)`
+`r pander(team.table)`
+
+```{r, echo = F, eval = T}
+
+data = data %>% dplyr::select(-Note)
+
+colnames(data)[which(colnames(data) == 'Yards Gained')] = 'Yards.Gained'
+
+data$QB.Position = ifelse(data$`Shotgun` == 1, 'Shotgun',
+                      'Under Center')
+
+data$Play.Type = ifelse(data$Run == 1, 'Run',
+                  'Pass')
+
+
+summary.table = data %>% group_by(QB.Position,
+                                  Play.Type) %>% 
+  summarise(avg.yards = mean(`Yards.Gained`),
+            median.yards = median(`Yards.Gained`),
+            num.plays = n())
+  
+row.names(summary.table) = NULL
+
+
+ggplot(data, aes(x = `Yards.Gained`)) + xlab('Yards Gained') + ylab('Count') + 
+  facet_grid(rows = vars(QB.Position),   cols = vars(Play.Type)) +
+  geom_histogram(breaks = c(-30,
+                            -25,
+                            -20,
+                            -15,
+                            -10, 
+                            -5,
+                            0,
+                            5,
+                            10,
+                            15,
+                            20,
+                            25,
+                            30),
+                 fill = 'skyblue',
+                 colour = 'black') + 
+ 
+  theme_bw() + 
+  theme(panel.grid.major.y = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.text = element_text(size = 15)) + 
+    scale_x_continuous(breaks = seq(from= -35, to = 35, by = 5))
+
+
+
+
+ggplot(data, aes(y = `Yards.Gained`)) +
+  facet_grid(rows = vars(QB.Position),   cols = vars(Play.Type)) +
+  geom_boxplot(fill = 'skyblue',
+                 colour = 'black') + 
+  ylab('Yards Gained') + coord_flip() + 
+  
+  theme_bw() + 
+  theme(panel.grid.major.y = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        strip.text = element_text(size = 15)) + 
+  scale_y_continuous(breaks = c(-40, -30,-20,-10, 0, 10, 20, 30, 40))
+  
+
+
+
+
+
+tired.data = data
+colnames(tired.data)[which(colnames(tired.data) == 'Play.Type')] = 'Play Type'
+ggplot(tired.data, aes(x = `Play Type`, y = `Yards.Gained`,
+                 fill = `Play Type`)) +
+  geom_violin(
+                 colour = 'black')  + 
+  coord_flip() +  scale_y_continuous(breaks = seq(from= -35, to = 35, by = 5)) + 
+    facet_wrap(. ~ `QB.Position`)+
+
+
+  theme_bw() + 
+  theme(panel.grid.major.y = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        strip.text = element_text(size = 15))  + ylab('')
+
+
+data$Home = as.factor(data$Home)
+data$Team = as.factor(data$Team)
+
+anova.mod = aov(Yards.Gained ~  QB.Position*Play.Type*Home*Team, data = data)
+
+
+
+
+
+```
+
+
+###Summary of Anova Model
+
+```{r, echo = F, eval = T}
+summary(anova.mod)
+
+```
+
+###Tukey HSD
+
+```{r, echo = F, eval = T}
+anova.mod = aov(Yards.Gained ~  QB.Position*Play.Type*Home, data = data)
+TukeyHSD(anova.mod)
+
+```
+
